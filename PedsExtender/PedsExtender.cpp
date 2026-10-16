@@ -396,7 +396,7 @@ public:
 			if (bInitialized) return;
 			bInitialized = true;
 
-			RequestModelIfExists("army", &iModelArmy);
+			FindModelIfExists("army", &iModelArmy); // streamed in only near military zones, see processScriptsEvent
 			RequestModelIfExists("cdeput", &iModelCdeput);
 			RequestModelIfExists("dsher", &iModelDsher);
 			RequestModelIfExists("sfpdm1", &iModelsfpdm1);
@@ -489,6 +489,14 @@ public:
 				LoadSomePedModel(-1, true, false);
 				LoadSomePedModel(-1, true, false);*/
 				bFirstFrame = false;
+			}
+
+			// Army is only picked while the camera is in a military zone (see CustomGetCopModelByZone), so stream it in there,
+			// ahead of the first cop, instead of keeping it in memory all the time. Below 6 stars the game marks army as deletable
+			// every frame, which cancels a pending request without KEEP_IN_MEMORY; once loaded, it's unloaded normally after leaving.
+			if (iModelArmy > 0 && (*(int*)0xC87ABC & 0x1000) != 0 && CStreaming::ms_aInfoForModel[iModelArmy].m_nLoadState != LOADSTATE_LOADED)
+			{
+				CStreaming::RequestModel(iModelArmy, eStreamingFlags::GAME_REQUIRED | eStreamingFlags::KEEP_IN_MEMORY);
 			}
 
 			WriteMemory<uint8_t>(0x5DDD85 + 0, 0x68, true);
